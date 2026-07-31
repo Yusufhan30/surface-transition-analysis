@@ -184,55 +184,77 @@ def grafik3(g):
     plt.close(fig)
 
 
-if __name__ == "__main__":
-    g = pd.read_parquet(VERI / "atp_bloklar.parquet")
-    print("[8] Grafikler")
-    grafik1(g); grafik2(g); grafik3(g)
-
-
 # ============================================================
 # GRAFİK 4 — Blok algoritması tenis takvimini yeniden üretiyor
 # ============================================================
 
 def grafik4(d, oyuncular=("Carlos Alcaraz", "Novak Djokovic", "Alexander Zverev"), yil=2024):
     import matplotlib.dates as mdates
-    fig, ax = plt.subplots(figsize=(12.5, 4.6))
+    from matplotlib.patches import Patch
+
+    fig, ax = plt.subplots(figsize=(12.5, 4.4))
 
     for i, oy in enumerate(oyuncular):
         a = d[(d.oyuncu_ad == oy) & (d.yil == yil)]
         for _, gr in a.groupby("blok_id"):
-            bas, bit = gr.tarih.min(), gr.tarih.max()
-            if bas == bit:
-                bit = bas + pd.Timedelta(days=6)
-            renk = ZEMIN_RENK[gr.surface.iloc[0]]
-            ax.barh(i, (bit - bas).days + 6, left=bas, height=0.42,
-                    color=renk, edgecolor="white", linewidth=1.2)
+            bas = gr.tarih.min()
+            bit = gr.tarih.max() + pd.Timedelta(days=7)   # turnuva ~1 hafta sürer
+            ax.barh(i, bit - bas, left=bas, height=0.44,
+                    color=ZEMIN_RENK[gr.surface.iloc[0]],
+                    edgecolor="white", linewidth=1.4)
             n = int(gr.blok_boy.iloc[0])
-            if (bit - bas).days > 20:
-                ax.text(bas + (bit - bas) / 2, i, f"{n}", ha="center", va="center",
-                        color="white", fontsize=8.5, weight="bold")
+            if (bit - bas).days >= 21:
+                ax.text(bas + (bit - bas) / 2, i, str(n), ha="center", va="center",
+                        color="white", fontsize=9, weight="bold")
 
+    ax.set_xlim(pd.Timestamp(f"{yil}-01-01"), pd.Timestamp(f"{yil}-12-15"))
+    ax.set_ylim(len(oyuncular) - 0.5, -0.6)
     ax.set_yticks(range(len(oyuncular)))
-    ax.set_yticklabels([o.split()[-1] for o in oyuncular], fontsize=10.5)
-    ax.invert_yaxis()
+    ax.set_yticklabels([o.split()[-1] for o in oyuncular], fontsize=11)
     ax.xaxis.set_major_locator(mdates.MonthLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
     ax.grid(axis="x", color="#EDF0F2", lw=0.8)
     ax.set_axisbelow(True)
-    ax.set_ylim(len(oyuncular) - 0.5, -0.7)
 
-    for renk, ad in [(CLAY, "Toprak"), (GRASS, "Çim"), (HARD, "Sert")]:
-        ax.bar(0, 0, color=renk, label=ad)
-    ax.legend(frameon=False, ncol=3, fontsize=9.5, loc="upper center",
-              bbox_to_anchor=(0.5, 1.12))
+    ax.legend(handles=[Patch(facecolor=CLAY, label="Toprak"),
+                       Patch(facecolor=GRASS, label="Çim"),
+                       Patch(facecolor=HARD, label="Sert")],
+              frameon=False, ncol=3, fontsize=9.5,
+              loc="upper center", bbox_to_anchor=(0.5, 1.13))
 
     fig.suptitle("Algoritmaya tek bir turnuva adı vermedim. Tenis takvimini kendi buldu.",
                  fontsize=13, x=0.011, ha="left", y=0.99, weight="bold")
-    fig.text(0.011, 0.905,
+    fig.text(0.011, 0.90,
              f"{yil} sezonu · her kutu bir “zemin bloğu”, içindeki sayı o bloktaki maç sayısı · "
-             "kural: zemin değişince yeni blok",
+             "kural: zemin değişince yeni blok başlar",
              fontsize=8.6, color="#6C7780")
-    fig.tight_layout(rect=[0, 0, 1, 0.86])
+    fig.tight_layout(rect=[0, 0, 1, 0.85])
     fig.savefig(GRAFIK / "4_sezon_takvimi.png", dpi=200, bbox_inches="tight")
     print("  ✓ 4_sezon_takvimi.png")
     plt.close(fig)
+
+
+# ============================================================
+# YARDIMCI — tüm blokları kur (grafik 4 filtrelenmemiş veri ister)
+# ============================================================
+
+def tum_bloklar(d, maks_bosluk=60):
+    d = d.sort_values(["oyuncu_id", "tarih", "tur_sira", "match_num"]).reset_index(drop=True)
+    zd = d.surface != d.groupby("oyuncu_id").surface.shift()
+    ua = d.groupby("oyuncu_id").tarih.diff().dt.days > maks_bosluk
+    yo = d.oyuncu_id != d.oyuncu_id.shift()
+    d["blok_id"] = (zd | ua | yo).cumsum()
+    d["blok_sira"] = d.groupby("blok_id").cumcount() + 1
+    d["blok_boy"] = d.groupby("blok_id").blok_sira.transform("max")
+    return d
+
+
+if __name__ == "__main__":
+    print("[8] Grafikler")
+    g = pd.read_parquet(VERI / "atp_bloklar.parquet")
+    grafik1(g)
+    grafik2(g)
+    grafik3(g)
+
+    hepsi = tum_bloklar(pd.read_parquet(VERI / "atp_rezidu.parquet"))
+    grafik4(hepsi)
