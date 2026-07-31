@@ -1,5 +1,7 @@
 # Do Tennis Players Need Time to Adapt to a New Surface?
 
+*[Türkçe versiyon](README_tr.md)*
+
 **I set out to measure surface adaptation in professional tennis. The effect I found disappeared once I controlled for which tournament each match was played at.**
 
 ![The effect dissolving](figures/1_etkinin_erimesi.png)
