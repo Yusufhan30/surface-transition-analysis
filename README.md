@@ -222,7 +222,7 @@ The ridge regularisation parameter has no effect on the result.
 ## Reproduction
 
 ```bash
-git clone <repo>
+git clone https://github.com/Yusufhan30/surface-transition-analysis.git
 cd surface-transition-analysis
 pip install -r requirements.txt
 
