@@ -151,7 +151,7 @@ def grafik2(g):
 
 def grafik3(g):
     fig, ax = plt.subplots(figsize=(9.5, 5.2))
-    for sut, ad, renk in [("z_iade_turn", "İade", NOTR), ("z_servis", "Servis", SOLUK)]:
+    for sut, ad, renk in [("z_iade_turn", "İade", NOTR), ("z_servis_turn", "Servis", SOLUK)]:
         xs, ort, lo, hi = [], [], [], []
         for i in range(1, 9):
             v = g.loc[g.blok_sira == i, sut].dropna().values
@@ -188,3 +188,51 @@ if __name__ == "__main__":
     g = pd.read_parquet(VERI / "atp_bloklar.parquet")
     print("[8] Grafikler")
     grafik1(g); grafik2(g); grafik3(g)
+
+
+# ============================================================
+# GRAFİK 4 — Blok algoritması tenis takvimini yeniden üretiyor
+# ============================================================
+
+def grafik4(d, oyuncular=("Carlos Alcaraz", "Novak Djokovic", "Alexander Zverev"), yil=2024):
+    import matplotlib.dates as mdates
+    fig, ax = plt.subplots(figsize=(12.5, 4.6))
+
+    for i, oy in enumerate(oyuncular):
+        a = d[(d.oyuncu_ad == oy) & (d.yil == yil)]
+        for _, gr in a.groupby("blok_id"):
+            bas, bit = gr.tarih.min(), gr.tarih.max()
+            if bas == bit:
+                bit = bas + pd.Timedelta(days=6)
+            renk = ZEMIN_RENK[gr.surface.iloc[0]]
+            ax.barh(i, (bit - bas).days + 6, left=bas, height=0.42,
+                    color=renk, edgecolor="white", linewidth=1.2)
+            n = int(gr.blok_boy.iloc[0])
+            if (bit - bas).days > 20:
+                ax.text(bas + (bit - bas) / 2, i, f"{n}", ha="center", va="center",
+                        color="white", fontsize=8.5, weight="bold")
+
+    ax.set_yticks(range(len(oyuncular)))
+    ax.set_yticklabels([o.split()[-1] for o in oyuncular], fontsize=10.5)
+    ax.invert_yaxis()
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+    ax.grid(axis="x", color="#EDF0F2", lw=0.8)
+    ax.set_axisbelow(True)
+    ax.set_ylim(len(oyuncular) - 0.5, -0.7)
+
+    for renk, ad in [(CLAY, "Toprak"), (GRASS, "Çim"), (HARD, "Sert")]:
+        ax.bar(0, 0, color=renk, label=ad)
+    ax.legend(frameon=False, ncol=3, fontsize=9.5, loc="upper center",
+              bbox_to_anchor=(0.5, 1.12))
+
+    fig.suptitle("Algoritmaya tek bir turnuva adı vermedim. Tenis takvimini kendi buldu.",
+                 fontsize=13, x=0.011, ha="left", y=0.99, weight="bold")
+    fig.text(0.011, 0.905,
+             f"{yil} sezonu · her kutu bir “zemin bloğu”, içindeki sayı o bloktaki maç sayısı · "
+             "kural: zemin değişince yeni blok",
+             fontsize=8.6, color="#6C7780")
+    fig.tight_layout(rect=[0, 0, 1, 0.86])
+    fig.savefig(GRAFIK / "4_sezon_takvimi.png", dpi=200, bbox_inches="tight")
+    print("  ✓ 4_sezon_takvimi.png")
+    plt.close(fig)
