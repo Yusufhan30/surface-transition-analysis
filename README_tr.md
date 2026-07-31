@@ -1,5 +1,8 @@
 # Zemin Geçiş Hızı Analizi
 
+*[English version](README.md)*
+
+
 **Tenisçilerin zemin adaptasyonunu ölçmeye çalıştım. Bulduğum etki, bir kontrol değişkeni ekleyince kayboldu.**
 
 ![Etkinin erimesi](figures/1_etkinin_erimesi.png)
